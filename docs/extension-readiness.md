@@ -52,19 +52,21 @@ After the refactoring:
 
 ## What still resists change
 
-- **Static global state in `Main`.**  There is no `GameState` class; fields like
-  `deck`, `discard`, `hands`, `scores`, `currentPlayer`, and `direction` live as
-  statics on `Main`.  Any extension that needs to simulate or fork game state
-  (e.g. a look-ahead bot) cannot do so without a deeper restructuring.
+- **Static player/score state in `Main`.**  Player names, human/bot flags, and
+  scores remain as static fields on `Main`.  These are CLI concerns and stay there,
+  but multiple games in one run still share these globals (tests or extensions
+  running games back-to-back must reset them).
 
-- **`playGame()` owns both I/O and rules.**  Console output is interleaved with
-  rule application.  A GUI front-end or AI harness that wants to observe game
-  events without printing to stdout would need the game loop extracted into a
-  separate class that fires callbacks or returns structured events.
+- **`playGame()` still owns I/O.**  Console output is interleaved with calling
+  `GameState` methods.  A GUI front-end or AI harness that wants to observe game
+  events without printing to stdout would need `playGame()` refactored to fire
+  callbacks or yield structured events instead of printing.
 
-- **Multi-game score tracking** is tied to a `scores[]` array indexed by player
-  position.  Adding players or removing them between games without resetting the
-  array is error-prone.
+- **GameState fields are private with getters/setters.**  Game state (deck,
+  discard, hands, upCard, calledColor, currentPlayer, direction) is now safely
+  encapsulated in `GameState`, preventing invalid state transitions and allowing
+  simulation/testing without side effects.  Multiple game instances can coexist
+  without interference.
 
 ## Summary table
 

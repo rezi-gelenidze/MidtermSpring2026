@@ -9,15 +9,15 @@ import java.util.Random;
  */
 public class GameState {
 
-    ArrayList<Card> deck    = new ArrayList<Card>();
-    ArrayList<Card> discard = new ArrayList<Card>();
-    ArrayList<ArrayList<Card>> hands = new ArrayList<ArrayList<Card>>();
-    Card   upCard      = Card.of("R0");
-    String calledColor = "";
-    int    direction   = 1;
-    int    currentPlayer = 0;
-    int    playerCount;
-    Random random;
+    private ArrayList<Card> deck    = new ArrayList<Card>();
+    private ArrayList<Card> discard = new ArrayList<Card>();
+    private ArrayList<ArrayList<Card>> hands = new ArrayList<ArrayList<Card>>();
+    private Card   upCard      = Card.of("R0");
+    private String calledColor = "";
+    private int    direction   = 1;
+    private int    currentPlayer = 0;
+    private int    playerCount;
+    private Random random;
 
     // Set by applyCardEffect so the caller can announce who drew cards.
     int lastForcedDrawCount  = 0;
@@ -160,4 +160,19 @@ public class GameState {
         if (g >= r && g >= y && g >= b) return "G";
         return "B";
     }
+
+    // Getters for immutable inspection
+    public int getCurrentPlayer() { return currentPlayer; }
+    public Card getUpCard() { return upCard; }
+    public String getCalledColor() { return calledColor; }
+    public int getDirection() { return direction; }
+    public ArrayList<Card> getHand(int playerIndex) { return hands.get(playerIndex); }
+    public ArrayList<ArrayList<Card>> getAllHands() { return hands; }
+    public ArrayList<Card> getDiscard() { return discard; }
+    public ArrayList<Card> getDeck() { return deck; }
+
+    // Setters for controlled mutation
+    void setUpCard(Card card) { this.upCard = card; }
+    void setCalledColor(String color) { this.calledColor = color; }
+    void addToDiscard(Card card) { this.discard.add(card); }
 }

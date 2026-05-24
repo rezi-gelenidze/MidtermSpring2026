@@ -86,12 +86,16 @@ Extracted two focused methods from `playGame()`:
 
 ## Risks that remain
 
-- **Static global state.** All game state (`deck`, `discard`, `hands`, `upCard`,
-  `calledColor`, `currentPlayer`, `direction`, `scores`, `random`) is still held
-  as static fields on `Main`.  Tests must carefully reset these fields; two test
-  runs in the same JVM process can interfere.
-- **`playGame()` is still long.** At ~150 lines it is much improved but still
-  handles game setup, the main loop, human I/O, win detection, and card effects.
-  A `GameState` or `Game` class would isolate it further.
-- **No interface for bot strategy.** `chooseBotCard` is a static method.
-  Plugging in an alternative strategy still requires modifying `Main`.
+- **Static player/score state in `Main`.**  CLI concerns (`playerNames`, `humanPlayers`,
+  `scores`, `random`, `scanner`) remain as statics on `Main`.  Extensions or tests
+  running multiple games in the same JVM process must manually reset these fields.
+  Game logic itself (`deck`, `discard`, `hands`, `upCard`, `calledColor`,
+  `currentPlayer`, `direction`) is now safely in `GameState` with getters/setters
+  — multiple game instances coexist without interference.
+- **`playGame()` still handles I/O.**  At ~110 lines it focuses on turn flow but
+  still prints to stdout and reads from stdin.  An event-driven refactor (firing
+  callbacks for "player must choose," "card played," "game won") would enable
+  headless simulation or GUI front-ends, but would require inverting control.
+- **No interface for bot strategy.** `chooseBotCard` is a method on `GameState`.
+  Plugging in an alternative strategy still requires modifying `GameState` or
+  extracting a `BotStrategy` interface.

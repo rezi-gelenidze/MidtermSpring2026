@@ -42,6 +42,11 @@ public class CharacterizationTest {
         testDrawReshuffle();
         testTallyPoints();
         testBotAutoPlayDrawn();
+        testSkipAdvancesTwice();
+        testReverseFlipsDirection();
+        testDrawTwoForcesDraw();
+        testWildDrawFourForcesDraw();
+        testNormalCardAdvancesOnce();
 
         System.out.println("\nCharacterizationTest: " + passed + " passed, " + failed + " failed.");
         if (failed > 0) System.exit(1);
@@ -206,12 +211,12 @@ public class CharacterizationTest {
 
     static void testDrawReshuffle() {
         GameState g = new GameState(2, new java.util.Random(42));
-        g.discard.add(Card.of("R1"));
-        g.discard.add(Card.of("G5"));
+        g.getDiscard().add(Card.of("R1"));
+        g.getDiscard().add(Card.of("G5"));
         Card drawn = g.draw();
         assertTrue("draw reshuffles discard when deck empty",
                 drawn.code.equals("R1") || drawn.code.equals("G5"));
-        assertTrue("discard cleared after reshuffle", g.discard.isEmpty());
+        assertTrue("discard cleared after reshuffle", g.getDiscard().isEmpty());
     }
 
     // -----------------------------------------------------------------------
@@ -221,9 +226,9 @@ public class CharacterizationTest {
     static void testTallyPoints() {
         // 3-player game: winner=0, p1 holds R5+GS=25, p2 holds W+B3=53 => 78
         GameState g = new GameState(3, new java.util.Random());
-        g.hands.get(0).clear();
-        g.hands.get(1).add(Card.of("R5")); g.hands.get(1).add(Card.of("GS"));
-        g.hands.get(2).add(Card.of("W"));  g.hands.get(2).add(Card.of("B3"));
+        g.getHand(0).clear();
+        g.getHand(1).add(Card.of("R5")); g.getHand(1).add(Card.of("GS"));
+        g.getHand(2).add(Card.of("W"));  g.getHand(2).add(Card.of("B3"));
         assertEqual("tallyPoints sums opponents", 78, g.tallyPoints(0));
     }
 
@@ -235,11 +240,57 @@ public class CharacterizationTest {
         // When a bot draws a card that is legal, the engine sets chosen = hand.size()-1.
         // This test pins the component: draw() returns the expected card and isLegal() is true.
         GameState g = gameWith("R9", "");
-        g.deck.add(Card.of("R5"));
+        g.getDeck().add(Card.of("R5"));
         Card drawn = g.draw();
         assertEqual("drawn card code", "R5", drawn.code);
         assertTrue("drawn card is legal — bot would auto-play it",
-                Rules.isLegal(drawn, g.upCard, g.calledColor));
+                Rules.isLegal(drawn, g.getUpCard(), g.getCalledColor()));
+    }
+
+    // -----------------------------------------------------------------------
+    // GameState: applyCardEffect tests
+    // -----------------------------------------------------------------------
+
+    static void testSkipAdvancesTwice() {
+        GameState g = new GameState(3, new java.util.Random());
+        g.setUpCard(Card.of("RS"));
+        g.applyCardEffect(Card.of("RS"));
+        assertEqual("SKIP advances turn twice from player 0", 2, g.getCurrentPlayer());
+    }
+
+    static void testReverseFlipsDirection() {
+        GameState g = new GameState(3, new java.util.Random());
+        g.setUpCard(Card.of("GR"));
+        g.applyCardEffect(Card.of("GR"));
+        assertEqual("REVERSE changes direction", -1, g.getDirection());
+    }
+
+    static void testDrawTwoForcesDraw() {
+        GameState g = new GameState(3, new java.util.Random());
+        g.buildDeck();
+        g.dealCards();
+        int p1Start = g.getHand(1).size();
+        g.applyCardEffect(Card.of("R+2"));
+        assertEqual("DRAW_TWO: forced player draws 2", p1Start + 2, g.getHand(1).size());
+        assertEqual("DRAW_TWO: sets lastForcedDrawCount", 2, g.lastForcedDrawCount);
+        assertEqual("DRAW_TWO: sets lastForcedDrawTarget", 1, g.lastForcedDrawTarget);
+    }
+
+    static void testWildDrawFourForcesDraw() {
+        GameState g = new GameState(3, new java.util.Random());
+        g.buildDeck();
+        g.dealCards();
+        int p1Start = g.getHand(1).size();
+        g.applyCardEffect(Card.of("W4"));
+        assertEqual("WILD_DRAW_FOUR: forced player draws 4", p1Start + 4, g.getHand(1).size());
+        assertEqual("WILD_DRAW_FOUR: sets lastForcedDrawCount", 4, g.lastForcedDrawCount);
+        assertEqual("WILD_DRAW_FOUR: sets lastForcedDrawTarget", 1, g.lastForcedDrawTarget);
+    }
+
+    static void testNormalCardAdvancesOnce() {
+        GameState g = new GameState(3, new java.util.Random());
+        g.applyCardEffect(Card.of("R5"));
+        assertEqual("normal card advances turn once", 1, g.getCurrentPlayer());
     }
 
     // -----------------------------------------------------------------------
@@ -248,8 +299,8 @@ public class CharacterizationTest {
 
     static GameState gameWith(String upCode, String called) {
         GameState g = new GameState(2, new java.util.Random());
-        g.upCard      = Card.of(upCode);
-        g.calledColor = called;
+        g.setUpCard(Card.of(upCode));
+        g.setCalledColor(called);
         return g;
     }
 

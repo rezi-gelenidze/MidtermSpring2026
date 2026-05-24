@@ -81,14 +81,14 @@ public class Main {
         int guard = 0;
         while (guard < 3000) {
             guard++;
-            int    cp     = game.currentPlayer;
+            int    cp     = game.getCurrentPlayer();
             String name   = playerNames.get(cp);
             boolean isHuman = humanPlayers.get(cp).booleanValue();
-            ArrayList<Card> hand = game.hands.get(cp);
+            ArrayList<Card> hand = game.getHand(cp);
 
             if (!quiet) {
-                System.out.println("\nUp card: " + game.upCard
-                        + (game.calledColor.equals("") ? "" : " called " + game.calledColor));
+                System.out.println("\nUp card: " + game.getUpCard()
+                        + (game.getCalledColor().equals("") ? "" : " called " + game.getCalledColor()));
                 System.out.println(name + " hand: " + join(hand));
             }
 
@@ -98,7 +98,7 @@ public class Main {
                 Card drawn = game.draw();
                 hand.add(drawn);
                 if (!quiet) System.out.println(name + " draws " + drawn);
-                if (Rules.isLegal(drawn, game.upCard, game.calledColor)) {
+                if (Rules.isLegal(drawn, game.getUpCard(), game.getCalledColor())) {
                     if (!isHuman) {
                         chosen = hand.size() - 1;
                     } else {
@@ -120,7 +120,7 @@ public class Main {
                 }
 
                 Card card = hand.get(chosen);
-                if (!Rules.isLegal(card, game.upCard, game.calledColor)) {
+                if (!Rules.isLegal(card, game.getUpCard(), game.getCalledColor())) {
                     if (!quiet) System.out.println(name + " tried illegal card " + card + " and draws a penalty card.");
                     hand.add(game.draw());
                     game.next();
@@ -128,14 +128,14 @@ public class Main {
                 }
 
                 hand.remove(chosen);
-                game.discard.add(game.upCard);
-                game.upCard      = card;
-                game.calledColor = "";
+                game.addToDiscard(game.getUpCard());
+                game.setUpCard(card);
+                game.setCalledColor("");
                 if (!quiet) System.out.println(name + " plays " + card);
 
                 if (card.isWild()) {
-                    game.calledColor = isHuman ? askColor() : game.chooseBotColor(hand);
-                    if (!quiet) System.out.println(name + " calls " + game.calledColor);
+                    game.setCalledColor(isHuman ? askColor() : game.chooseBotColor(hand));
+                    if (!quiet) System.out.println(name + " calls " + game.getCalledColor());
                 }
 
                 if (hand.size() == 1 && !quiet) System.out.println(name + " says UNO!");
@@ -170,10 +170,10 @@ public class Main {
             try {
                 int index = Integer.parseInt(input);
                 if (index >= 0 && index < hand.size()) return index;
-            } catch (Exception ignored) {}
+            } catch (NumberFormatException ignored) {}
             for (int i = 0; i < hand.size(); i++) {
                 if (hand.get(i).code.equals(input)) {
-                    if (Rules.isLegal(hand.get(i), game.upCard, game.calledColor)) return i;
+                    if (Rules.isLegal(hand.get(i), game.getUpCard(), game.getCalledColor())) return i;
                     System.out.println("That card is not legal.");
                 }
             }
@@ -219,7 +219,7 @@ public class Main {
         if (!isLegal("B3", "R9", "")) passed++; else fail("illegal mismatch");
 
         GameState g = new GameState(2, random);
-        g.upCard = Card.of("R9"); g.calledColor = "";
+        g.setUpCard(Card.of("R9")); g.setCalledColor("");
         ArrayList<Card> h = new ArrayList<Card>();
         h.add(Card.of("B3")); h.add(Card.of("R4")); h.add(Card.of("W"));
         if (g.chooseBotCard(h) == 1) passed++; else fail("bot normal before wild");
