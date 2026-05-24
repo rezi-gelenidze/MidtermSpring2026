@@ -36,6 +36,10 @@ public class CharacterizationTest {
         testChooseBotCardReturnsMinusOneWhenNoPlay();
         testChooseBotColor();
         testDrawReshuffle();
+        testCardIsWild();
+        testTallyPoints();
+        testBotAutoPlayDrawn();
+        testChooseBotColorTieBreak();
 
         System.out.println("\nCharacterizationTest: " + passed + " passed, " + failed + " failed.");
         if (failed > 0) System.exit(1);
@@ -161,6 +165,45 @@ public class CharacterizationTest {
         assertTrue("draw reshuffles discard when deck empty",
                 drawn.code.equals("R1") || drawn.code.equals("G5"));
         assertTrue("discard cleared after reshuffle", Main.discard.size() == 0);
+    }
+
+    static void testCardIsWild() {
+        assertTrue("W isWild", Card.of("W").isWild());
+        assertTrue("W4 isWild", Card.of("W4").isWild());
+        assertFalse("R5 not wild", Card.of("R5").isWild());
+        assertFalse("GS not wild", Card.of("GS").isWild());
+    }
+
+    static void testTallyPoints() {
+        // 3 players: winner=0, p1 holds R5+GS=25, p2 holds W+B3=53 => total 78
+        Main.hands.clear();
+        ArrayList<Card> p0 = new ArrayList<Card>(); // winner, not counted
+        ArrayList<Card> p1 = new ArrayList<Card>();
+        p1.add(Card.of("R5")); p1.add(Card.of("GS"));
+        ArrayList<Card> p2 = new ArrayList<Card>();
+        p2.add(Card.of("W")); p2.add(Card.of("B3"));
+        Main.hands.add(p0); Main.hands.add(p1); Main.hands.add(p2);
+        assertEqual("tallyPoints sums opponents", 78, Main.tallyPoints(0));
+    }
+
+    static void testBotAutoPlayDrawn() {
+        // Pins the auto-play component: when bot draws a legal card, isLegal is true
+        Main.upCard = Card.of("R9");
+        Main.calledColor = "";
+        Main.deck.clear();
+        Main.deck.add(Card.of("R5"));  // first card in deck
+        Card drawn = Main.draw();
+        assertTrue("drawn card is legal (enables bot auto-play)",
+                Rules.isLegal(drawn, Main.upCard, Main.calledColor));
+        assertEqual("drawn card code", "R5", drawn.code);
+    }
+
+    static void testChooseBotColorTieBreak() {
+        // equal count of all colors; result must be a valid color
+        ArrayList<Card> hand = clist("R1", "G2", "Y3", "B4");
+        String color = Main.chooseBotColor(hand);
+        assertTrue("chooseBotColor returns valid color",
+                color.equals("R") || color.equals("Y") || color.equals("G") || color.equals("B"));
     }
 
     static ArrayList<Card> clist(String... codes) {
