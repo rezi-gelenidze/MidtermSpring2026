@@ -42,46 +42,46 @@ public class CharacterizationTest {
     }
 
     static void testColor() {
-        assertEqual("color R5", "R", Main.color("R5"));
-        assertEqual("color Y3", "Y", Main.color("Y3"));
-        assertEqual("color G+2", "G", Main.color("G+2"));
-        assertEqual("color BS", "B", Main.color("BS"));
-        assertEqual("color W", "", Main.color("W"));
-        assertEqual("color W4", "", Main.color("W4"));
+        assertEqual("color R5", "R", Card.of("R5").color());
+        assertEqual("color Y3", "Y", Card.of("Y3").color());
+        assertEqual("color G+2", "G", Card.of("G+2").color());
+        assertEqual("color BS", "B", Card.of("BS").color());
+        assertEqual("color W", "", Card.of("W").color());
+        assertEqual("color W4", "", Card.of("W4").color());
     }
 
     static void testRank() {
-        assertEqual("rank W", "WILD", Main.rank("W"));
-        assertEqual("rank W4", "WILD_DRAW_FOUR", Main.rank("W4"));
-        assertEqual("rank RS", "SKIP", Main.rank("RS"));
-        assertEqual("rank GR", "REVERSE", Main.rank("GR"));
-        assertEqual("rank B+2", "DRAW_TWO", Main.rank("B+2"));
-        assertEqual("rank R0", "NUMBER", Main.rank("R0"));
-        assertEqual("rank Y7", "NUMBER", Main.rank("Y7"));
+        assertEqual("rank W", "WILD", Card.of("W").rank());
+        assertEqual("rank W4", "WILD_DRAW_FOUR", Card.of("W4").rank());
+        assertEqual("rank RS", "SKIP", Card.of("RS").rank());
+        assertEqual("rank GR", "REVERSE", Card.of("GR").rank());
+        assertEqual("rank B+2", "DRAW_TWO", Card.of("B+2").rank());
+        assertEqual("rank R0", "NUMBER", Card.of("R0").rank());
+        assertEqual("rank Y7", "NUMBER", Card.of("Y7").rank());
     }
 
     static void testNumber() {
-        assertEqual("number R0", 0, Main.number("R0"));
-        assertEqual("number G9", 9, Main.number("G9"));
-        assertEqual("number W", -1, Main.number("W"));
-        assertEqual("number RS", -1, Main.number("RS"));
+        assertEqual("number R0", 0, Card.of("R0").number());
+        assertEqual("number G9", 9, Card.of("G9").number());
+        assertEqual("number W", -1, Card.of("W").number());
+        assertEqual("number RS", -1, Card.of("RS").number());
     }
 
     static void testScoringNumberCard() {
-        assertEqual("points R5", 5, Main.points("R5"));
-        assertEqual("points Y0", 0, Main.points("Y0"));
-        assertEqual("points G9", 9, Main.points("G9"));
+        assertEqual("points R5", 5, Card.of("R5").points());
+        assertEqual("points Y0", 0, Card.of("Y0").points());
+        assertEqual("points G9", 9, Card.of("G9").points());
     }
 
     static void testScoringActionCard() {
-        assertEqual("points GS", 20, Main.points("GS"));
-        assertEqual("points BR", 20, Main.points("BR"));
-        assertEqual("points G+2", 20, Main.points("G+2"));
+        assertEqual("points GS", 20, Card.of("GS").points());
+        assertEqual("points BR", 20, Card.of("BR").points());
+        assertEqual("points G+2", 20, Card.of("G+2").points());
     }
 
     static void testScoringWildCard() {
-        assertEqual("points W", 50, Main.points("W"));
-        assertEqual("points W4", 50, Main.points("W4"));
+        assertEqual("points W", 50, Card.of("W").points());
+        assertEqual("points W4", 50, Card.of("W4").points());
     }
 
     static void testIsLegalColorMatch() {
@@ -117,55 +117,55 @@ public class CharacterizationTest {
     }
 
     static void testChooseBotCardPrefersDrawTwo() {
-        Main.upCard = "R9"; Main.calledColor = "";
-        ArrayList<String> hand = slist("RS", "R+2", "W");
+        Main.upCard = Card.of("R9"); Main.calledColor = "";
+        ArrayList<Card> hand = clist("RS", "R+2", "W");
         assertEqual("bot prefers DRAW_TWO", 1, Main.chooseBotCard(hand));
     }
 
     static void testChooseBotCardPrefersSkipOverNumber() {
-        Main.upCard = "R9"; Main.calledColor = "";
-        ArrayList<String> hand = slist("R5", "RS", "W");
+        Main.upCard = Card.of("R9"); Main.calledColor = "";
+        ArrayList<Card> hand = clist("R5", "RS", "W");
         assertEqual("bot prefers SKIP over NUMBER", 1, Main.chooseBotCard(hand));
     }
 
     static void testChooseBotCardPrefersNumberOverWild() {
-        Main.upCard = "R9"; Main.calledColor = "";
-        ArrayList<String> hand = slist("B3", "R4", "W");
+        Main.upCard = Card.of("R9"); Main.calledColor = "";
+        ArrayList<Card> hand = clist("B3", "R4", "W");
         assertEqual("bot prefers NUMBER over WILD", 1, Main.chooseBotCard(hand));
     }
 
     static void testChooseBotCardUsesWildAsLastResort() {
-        Main.upCard = "R9"; Main.calledColor = "";
-        ArrayList<String> hand = slist("G3", "B5", "W");
+        Main.upCard = Card.of("R9"); Main.calledColor = "";
+        ArrayList<Card> hand = clist("G3", "B5", "W");
         assertEqual("bot uses WILD as last resort", 2, Main.chooseBotCard(hand));
     }
 
     static void testChooseBotCardReturnsMinusOneWhenNoPlay() {
-        Main.upCard = "R9"; Main.calledColor = "";
-        ArrayList<String> hand = slist("G3", "B5");
+        Main.upCard = Card.of("R9"); Main.calledColor = "";
+        ArrayList<Card> hand = clist("G3", "B5");
         assertEqual("bot returns -1 when no play", -1, Main.chooseBotCard(hand));
     }
 
     static void testChooseBotColor() {
-        ArrayList<String> hand = slist("B1", "B2", "R3");
+        ArrayList<Card> hand = clist("B1", "B2", "R3");
         assertEqual("chooseBotColor picks most common", "B", Main.chooseBotColor(hand));
     }
 
     static void testDrawReshuffle() {
         Main.deck.clear();
         Main.discard.clear();
-        Main.discard.add("R1");
-        Main.discard.add("G5");
+        Main.discard.add(Card.of("R1"));
+        Main.discard.add(Card.of("G5"));
         Main.random = new java.util.Random(42);
-        String drawn = Main.draw();
+        Card drawn = Main.draw();
         assertTrue("draw reshuffles discard when deck empty",
-                drawn.equals("R1") || drawn.equals("G5"));
+                drawn.code.equals("R1") || drawn.code.equals("G5"));
         assertTrue("discard cleared after reshuffle", Main.discard.size() == 0);
     }
 
-    static ArrayList<String> slist(String... codes) {
-        ArrayList<String> list = new ArrayList<String>();
-        for (String c : codes) list.add(c);
+    static ArrayList<Card> clist(String... codes) {
+        ArrayList<Card> list = new ArrayList<Card>();
+        for (String c : codes) list.add(Card.of(c));
         return list;
     }
 
