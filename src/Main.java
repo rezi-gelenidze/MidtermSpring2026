@@ -203,14 +203,7 @@ public class Main {
                 }
 
                 if (hand.size() == 0) {
-                    int points = 0;
-                    for (int i = 0; i < hands.size(); i++) {
-                        if (i != currentPlayer) {
-                            for (Card c : hands.get(i)) {
-                                points += c.points();
-                            }
-                        }
-                    }
+                    int points = tallyPoints(currentPlayer);
                     scores[currentPlayer] += points;
                     if (!quiet) {
                         System.out.println(name + " wins and scores " + points);
@@ -218,44 +211,66 @@ public class Main {
                     return;
                 }
 
-                String cardRank = card.rank();
-                if (cardRank.equals("SKIP")) {
-                    next();
-                    next();
-                } else if (cardRank.equals("REVERSE")) {
-                    direction = direction * -1;
-                    if (playerNames.size() == 2) {
-                        next();
-                        next();
-                    } else {
-                        next();
-                    }
-                } else if (cardRank.equals("DRAW_TWO")) {
-                    next();
-                    hands.get(currentPlayer).add(draw());
-                    hands.get(currentPlayer).add(draw());
-                    if (!quiet) {
-                        System.out.println(playerNames.get(currentPlayer) + " draws two.");
-                    }
-                    next();
-                } else if (cardRank.equals("WILD_DRAW_FOUR")) {
-                    next();
-                    for (int i = 0; i < 4; i++) {
-                        hands.get(currentPlayer).add(draw());
-                    }
-                    if (!quiet) {
-                        System.out.println(playerNames.get(currentPlayer) + " draws four.");
-                    }
-                    next();
-                } else {
-                    next();
-                }
+                applyCardEffect(card, hand);
+
             } else {
                 next();
             }
         }
         if (!quiet) {
             System.out.println("Game stopped at safety limit.");
+        }
+    }
+
+    /** Sums the points held in every opponent's hand. */
+    static int tallyPoints(int winner) {
+        int points = 0;
+        for (int i = 0; i < hands.size(); i++) {
+            if (i != winner) {
+                for (Card c : hands.get(i)) {
+                    points += c.points();
+                }
+            }
+        }
+        return points;
+    }
+
+    /**
+     * Advances the turn (and applies forced draws) based on the card just played.
+     * Extracted from the large if-chain in playGame().
+     */
+    static void applyCardEffect(Card card, ArrayList<Card> currentHand) {
+        String r = card.rank();
+        if (r.equals("SKIP")) {
+            next();
+            next();
+        } else if (r.equals("REVERSE")) {
+            direction = direction * -1;
+            if (playerNames.size() == 2) {
+                next();
+                next();
+            } else {
+                next();
+            }
+        } else if (r.equals("DRAW_TWO")) {
+            next();
+            hands.get(currentPlayer).add(draw());
+            hands.get(currentPlayer).add(draw());
+            if (!quiet) {
+                System.out.println(playerNames.get(currentPlayer) + " draws two.");
+            }
+            next();
+        } else if (r.equals("WILD_DRAW_FOUR")) {
+            next();
+            for (int i = 0; i < 4; i++) {
+                hands.get(currentPlayer).add(draw());
+            }
+            if (!quiet) {
+                System.out.println(playerNames.get(currentPlayer) + " draws four.");
+            }
+            next();
+        } else {
+            next();
         }
     }
 
@@ -401,14 +416,12 @@ public class Main {
     }
 
     static String join(ArrayList<Card> cards) {
-        String out = "";
+        StringBuilder out = new StringBuilder();
         for (int i = 0; i < cards.size(); i++) {
-            out += i + ":" + cards.get(i);
-            if (i < cards.size() - 1) {
-                out += " ";
-            }
+            out.append(i).append(':').append(cards.get(i));
+            if (i < cards.size() - 1) out.append(' ');
         }
-        return out;
+        return out.toString();
     }
 
     static void selfTest() {
