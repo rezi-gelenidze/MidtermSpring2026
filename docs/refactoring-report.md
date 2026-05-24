@@ -59,16 +59,18 @@ condition block from `chooseBotCard`; each priority loop now calls
 `Rules.isLegal()` instead.  The `isLegal(String,String,String)` shim in `Main`
 delegates to `Rules.isLegal`.
 
-### Step 4 – Extract helper methods in `Main`
-Extracted two focused methods from `playGame()`:
+### Step 4 – Extract `GameState` class
+Created `src/GameState.java` to own all mutable game state (deck, discard, hands,
+upCard, calledColor, currentPlayer, direction) and game logic. Extracted two
+focused methods into `GameState`:
 - `tallyPoints(int winner)` – sums opponent hand values; removes the nested loop
   from the win-detection branch.
-- `applyCardEffect(Card, ArrayList<Card>)` – applies SKIP/REVERSE/DRAW_TWO/
-  WILD_DRAW_FOUR side-effects and advances the turn; removes the long if-chain
-  from inside `playGame()`.
+- `applyCardEffect(Card)` – applies SKIP/REVERSE/DRAW_TWO/WILD_DRAW_FOUR
+  side-effects and advances the turn; removes the long if-chain from `playGame()`.
 
-`chooseBotCard` was also simplified: each priority loop is now a single readable
-`if` after the `Rules.isLegal` call replaces the duplicated block.
+`chooseBotCard(hand)` also moved to `GameState` where it can access upCard and
+calledColor directly.  Each priority loop is now a single readable `if` after
+the `Rules.isLegal` call replaces the duplicated block.
 
 ## Behaviour intentionally preserved (including quirks)
 

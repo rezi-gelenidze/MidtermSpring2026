@@ -20,8 +20,8 @@ public class GameState {
     private Random random;
 
     // Set by applyCardEffect so the caller can announce who drew cards.
-    int lastForcedDrawCount  = 0;
-    int lastForcedDrawTarget = -1;
+    private int lastForcedDrawCount  = 0;
+    private int lastForcedDrawTarget = -1;
 
     GameState(int playerCount, Random random) {
         this.playerCount = playerCount;
@@ -166,6 +166,8 @@ public class GameState {
     public Card getUpCard() { return upCard; }
     public String getCalledColor() { return calledColor; }
     public int getDirection() { return direction; }
+    public int getLastForcedDrawCount() { return lastForcedDrawCount; }
+    public int getLastForcedDrawTarget() { return lastForcedDrawTarget; }
     public ArrayList<Card> getHand(int playerIndex) { return hands.get(playerIndex); }
     public ArrayList<ArrayList<Card>> getAllHands() { return hands; }
     public ArrayList<Card> getDiscard() { return discard; }

@@ -149,9 +149,9 @@ public class Main {
 
                 game.applyCardEffect(card);
 
-                if (!quiet && game.lastForcedDrawCount > 0) {
-                    String victim = playerNames.get(game.lastForcedDrawTarget);
-                    String word   = game.lastForcedDrawCount == 2 ? "two" : "four";
+                if (!quiet && game.getLastForcedDrawCount() > 0) {
+                    String victim = playerNames.get(game.getLastForcedDrawTarget());
+                    String word   = game.getLastForcedDrawCount() == 2 ? "two" : "four";
                     System.out.println(victim + " draws " + word + ".");
                 }
 

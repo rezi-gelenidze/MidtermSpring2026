@@ -17,10 +17,11 @@ After the refactoring:
 - **`Rules.isLegal` is the single source of truth.**  A strategy knows exactly
   how to test playability for any candidate card without duplicating conditions.
 
-- **`chooseBotCard` is already isolated.**  It is a self-contained static method
-  with a clear signature: it receives a hand (`ArrayList<Card>`) and returns an
-  index.  Adding a `BotStrategy` interface requires changing only this call site
-  in `Main`.
+- **`chooseBotCard` is already isolated on `GameState`.**  It is a self-contained
+  instance method with a clear signature: it receives a hand (`ArrayList<Card>`)
+  and returns an index.  The method has access to the board state (upCard,
+  calledColor) it needs.  Adding a `BotStrategy` interface requires extracting
+  the priority logic into a separate class and having `GameState` delegate to it.
 
 ### Where the change goes
 

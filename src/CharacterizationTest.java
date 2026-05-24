@@ -269,22 +269,26 @@ public class CharacterizationTest {
         GameState g = new GameState(3, new java.util.Random());
         g.buildDeck();
         g.dealCards();
-        int p1Start = g.getHand(1).size();
+        int cp = g.getCurrentPlayer();
+        int next = (cp + 1) % 3;
+        int handBefore = g.getHand(next).size();
         g.applyCardEffect(Card.of("R+2"));
-        assertEqual("DRAW_TWO: forced player draws 2", p1Start + 2, g.getHand(1).size());
-        assertEqual("DRAW_TWO: sets lastForcedDrawCount", 2, g.lastForcedDrawCount);
-        assertEqual("DRAW_TWO: sets lastForcedDrawTarget", 1, g.lastForcedDrawTarget);
+        assertEqual("DRAW_TWO: forced player draws 2", handBefore + 2, g.getHand(next).size());
+        assertEqual("DRAW_TWO: sets lastForcedDrawCount", 2, g.getLastForcedDrawCount());
+        assertEqual("DRAW_TWO: sets lastForcedDrawTarget", next, g.getLastForcedDrawTarget());
     }
 
     static void testWildDrawFourForcesDraw() {
         GameState g = new GameState(3, new java.util.Random());
         g.buildDeck();
         g.dealCards();
-        int p1Start = g.getHand(1).size();
+        int cp = g.getCurrentPlayer();
+        int next = (cp + 1) % 3;
+        int handBefore = g.getHand(next).size();
         g.applyCardEffect(Card.of("W4"));
-        assertEqual("WILD_DRAW_FOUR: forced player draws 4", p1Start + 4, g.getHand(1).size());
-        assertEqual("WILD_DRAW_FOUR: sets lastForcedDrawCount", 4, g.lastForcedDrawCount);
-        assertEqual("WILD_DRAW_FOUR: sets lastForcedDrawTarget", 1, g.lastForcedDrawTarget);
+        assertEqual("WILD_DRAW_FOUR: forced player draws 4", handBefore + 4, g.getHand(next).size());
+        assertEqual("WILD_DRAW_FOUR: sets lastForcedDrawCount", 4, g.getLastForcedDrawCount());
+        assertEqual("WILD_DRAW_FOUR: sets lastForcedDrawTarget", next, g.getLastForcedDrawTarget());
     }
 
     static void testNormalCardAdvancesOnce() {
