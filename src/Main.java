@@ -1,22 +1,18 @@
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
+/**
+ * Main is the CLI entry point.  It owns only console I/O concerns:
+ * reading player input, printing game events, and accumulating scores
+ * across games.  All game logic lives in GameState.
+ */
 public class Main {
-    static ArrayList<String> playerNames = new ArrayList<String>();
+    static ArrayList<String>  playerNames  = new ArrayList<String>();
     static ArrayList<Boolean> humanPlayers = new ArrayList<Boolean>();
-    static ArrayList<ArrayList<Card>> hands = new ArrayList<ArrayList<Card>>();
-    static ArrayList<Card> deck = new ArrayList<Card>();
-    static ArrayList<Card> discard = new ArrayList<Card>();
-    static int[] scores = new int[10];
-    static int currentPlayer = 0;
-    static int direction = 1;
-    static Card upCard = Card.of("R0");
-    static String calledColor = "";
-    static boolean quiet = false;
-    static Random random = new Random();
+    static int[]   scores  = new int[10];
+    static boolean quiet   = false;
+    static Random  random  = new Random();
     static Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
@@ -54,9 +50,7 @@ public class Main {
         }
 
         for (int g = 1; g <= games; g++) {
-            if (!quiet) {
-                System.out.println("\n=== Game " + g + " ===");
-            }
+            if (!quiet) System.out.println("\n=== Game " + g + " ===");
             playGame();
         }
 
@@ -69,84 +63,43 @@ public class Main {
     static void setupPlayers(int bots, boolean human) {
         playerNames.clear();
         humanPlayers.clear();
-        hands.clear();
         if (human) {
             playerNames.add("You");
             humanPlayers.add(Boolean.TRUE);
-            hands.add(new ArrayList<Card>());
         }
         for (int i = 1; i <= bots; i++) {
             playerNames.add("Bot" + i);
             humanPlayers.add(Boolean.FALSE);
-            hands.add(new ArrayList<Card>());
         }
     }
 
     static void playGame() {
-        deck.clear();
-        String[] colors = {"R", "Y", "G", "B"};
-        for (int c = 0; c < colors.length; c++) {
-            deck.add(Card.of(colors[c] + "0"));
-            for (int n = 1; n <= 9; n++) {
-                deck.add(Card.of(colors[c] + n));
-                deck.add(Card.of(colors[c] + n));
-            }
-            deck.add(Card.of(colors[c] + "S"));
-            deck.add(Card.of(colors[c] + "S"));
-            deck.add(Card.of(colors[c] + "R"));
-            deck.add(Card.of(colors[c] + "R"));
-            deck.add(Card.of(colors[c] + "+2"));
-            deck.add(Card.of(colors[c] + "+2"));
-        }
-        for (int i = 0; i < 4; i++) {
-            deck.add(Card.of("W"));
-            deck.add(Card.of("W4"));
-        }
-        Collections.shuffle(deck, random);
-        discard.clear();
-        for (int i = 0; i < hands.size(); i++) {
-            hands.get(i).clear();
-        }
-        for (int i = 0; i < playerNames.size(); i++) {
-            for (int j = 0; j < 7; j++) {
-                hands.get(i).add(draw());
-            }
-        }
-        upCard = draw();
-        while (upCard.isWild()) {
-            discard.add(upCard);
-            upCard = draw();
-        }
-        calledColor = "";
-        direction = 1;
-        currentPlayer = random.nextInt(playerNames.size());
+        GameState game = new GameState(playerNames.size(), random);
+        game.buildDeck();
+        game.dealCards();
 
         int guard = 0;
         while (guard < 3000) {
             guard++;
-            String name = playerNames.get(currentPlayer);
-            ArrayList<Card> hand = hands.get(currentPlayer);
+            int    cp     = game.currentPlayer;
+            String name   = playerNames.get(cp);
+            boolean isHuman = humanPlayers.get(cp).booleanValue();
+            ArrayList<Card> hand = game.hands.get(cp);
 
             if (!quiet) {
-                System.out.println("\nUp card: " + upCard + (calledColor.equals("") ? "" : " called " + calledColor));
+                System.out.println("\nUp card: " + game.upCard
+                        + (game.calledColor.equals("") ? "" : " called " + game.calledColor));
                 System.out.println(name + " hand: " + join(hand));
             }
 
-            int chosen = -1;
-            if (humanPlayers.get(currentPlayer).booleanValue()) {
-                chosen = askHuman(hand);
-            } else {
-                chosen = chooseBotCard(hand);
-            }
+            int chosen = isHuman ? askHuman(hand, game) : game.chooseBotCard(hand);
 
             if (chosen == -1) {
-                Card drawn = draw();
+                Card drawn = game.draw();
                 hand.add(drawn);
-                if (!quiet) {
-                    System.out.println(name + " draws " + drawn);
-                }
-                if (Rules.isLegal(drawn, upCard, calledColor)) {
-                    if (!humanPlayers.get(currentPlayer).booleanValue()) {
+                if (!quiet) System.out.println(name + " draws " + drawn);
+                if (Rules.isLegal(drawn, game.upCard, game.calledColor)) {
+                    if (!isHuman) {
                         chosen = hand.size() - 1;
                     } else {
                         System.out.print("Play drawn card " + drawn + "? y/n: ");
@@ -160,186 +113,67 @@ public class Main {
 
             if (chosen >= 0) {
                 if (chosen >= hand.size()) {
-                    if (!quiet) {
-                        System.out.println(name + " selected an invalid index and draws a penalty card.");
-                    }
-                    hand.add(draw());
-                    next();
+                    if (!quiet) System.out.println(name + " selected an invalid index and draws a penalty card.");
+                    hand.add(game.draw());
+                    game.next();
                     continue;
                 }
 
                 Card card = hand.get(chosen);
-
-                if (!Rules.isLegal(card, upCard, calledColor)) {
-                    if (!quiet) {
-                        System.out.println(name + " tried illegal card " + card + " and draws a penalty card.");
-                    }
-                    hand.add(draw());
-                    next();
+                if (!Rules.isLegal(card, game.upCard, game.calledColor)) {
+                    if (!quiet) System.out.println(name + " tried illegal card " + card + " and draws a penalty card.");
+                    hand.add(game.draw());
+                    game.next();
                     continue;
                 }
 
                 hand.remove(chosen);
-                discard.add(upCard);
-                upCard = card;
-                calledColor = "";
-                if (!quiet) {
-                    System.out.println(name + " plays " + card);
-                }
+                game.discard.add(game.upCard);
+                game.upCard      = card;
+                game.calledColor = "";
+                if (!quiet) System.out.println(name + " plays " + card);
 
                 if (card.isWild()) {
-                    if (humanPlayers.get(currentPlayer).booleanValue()) {
-                        calledColor = askColor();
-                    } else {
-                        calledColor = chooseBotColor(hand);
-                    }
-                    if (!quiet) {
-                        System.out.println(name + " calls " + calledColor);
-                    }
+                    game.calledColor = isHuman ? askColor() : game.chooseBotColor(hand);
+                    if (!quiet) System.out.println(name + " calls " + game.calledColor);
                 }
 
-                if (hand.size() == 1 && !quiet) {
-                    System.out.println(name + " says UNO!");
-                }
+                if (hand.size() == 1 && !quiet) System.out.println(name + " says UNO!");
 
                 if (hand.size() == 0) {
-                    int points = tallyPoints(currentPlayer);
-                    scores[currentPlayer] += points;
-                    if (!quiet) {
-                        System.out.println(name + " wins and scores " + points);
-                    }
+                    int points = game.tallyPoints(cp);
+                    scores[cp] += points;
+                    if (!quiet) System.out.println(name + " wins and scores " + points);
                     return;
                 }
 
-                applyCardEffect(card, hand);
+                game.applyCardEffect(card);
 
-            } else {
-                next();
-            }
-        }
-        if (!quiet) {
-            System.out.println("Game stopped at safety limit.");
-        }
-    }
-
-    /** Sums the points held in every opponent's hand. */
-    static int tallyPoints(int winner) {
-        int points = 0;
-        for (int i = 0; i < hands.size(); i++) {
-            if (i != winner) {
-                for (Card c : hands.get(i)) {
-                    points += c.points();
+                if (!quiet && game.lastForcedDrawCount > 0) {
+                    String victim = playerNames.get(game.lastForcedDrawTarget);
+                    String word   = game.lastForcedDrawCount == 2 ? "two" : "four";
+                    System.out.println(victim + " draws " + word + ".");
                 }
-            }
-        }
-        return points;
-    }
 
-    /**
-     * Advances the turn (and applies forced draws) based on the card just played.
-     * Extracted from the large if-chain in playGame().
-     */
-    static void applyCardEffect(Card card, ArrayList<Card> currentHand) {
-        String r = card.rank();
-        if (r.equals("SKIP")) {
-            next();
-            next();
-        } else if (r.equals("REVERSE")) {
-            direction = direction * -1;
-            if (playerNames.size() == 2) {
-                next();
-                next();
             } else {
-                next();
+                game.next();
             }
-        } else if (r.equals("DRAW_TWO")) {
-            next();
-            hands.get(currentPlayer).add(draw());
-            hands.get(currentPlayer).add(draw());
-            if (!quiet) {
-                System.out.println(playerNames.get(currentPlayer) + " draws two.");
-            }
-            next();
-        } else if (r.equals("WILD_DRAW_FOUR")) {
-            next();
-            for (int i = 0; i < 4; i++) {
-                hands.get(currentPlayer).add(draw());
-            }
-            if (!quiet) {
-                System.out.println(playerNames.get(currentPlayer) + " draws four.");
-            }
-            next();
-        } else {
-            next();
         }
+        if (!quiet) System.out.println("Game stopped at safety limit.");
     }
 
-    static Card draw() {
-        if (deck.size() == 0) {
-            deck.addAll(discard);
-            discard.clear();
-            Collections.shuffle(deck, random);
-        }
-        if (deck.size() == 0) {
-            return Card.of("W");
-        }
-        return deck.remove(0);
-    }
-
-    /**
-     * Bot card selection: prefers DRAW_TWO > SKIP > NUMBER > WILD.
-     * Uses Rules.isLegal() to avoid duplicating the legality check.
-     */
-    static int chooseBotCard(ArrayList<Card> hand) {
-        // Prefer DRAW_TWO
-        for (int i = 0; i < hand.size(); i++) {
-            Card card = hand.get(i);
-            if (card.rank().equals("DRAW_TWO") && Rules.isLegal(card, upCard, calledColor)) {
-                return i;
-            }
-        }
-        // Prefer SKIP
-        for (int i = 0; i < hand.size(); i++) {
-            Card card = hand.get(i);
-            if (card.rank().equals("SKIP") && Rules.isLegal(card, upCard, calledColor)) {
-                return i;
-            }
-        }
-        // Prefer NUMBER
-        for (int i = 0; i < hand.size(); i++) {
-            Card card = hand.get(i);
-            if (card.rank().equals("NUMBER") && Rules.isLegal(card, upCard, calledColor)) {
-                return i;
-            }
-        }
-        // Fall back to WILD
-        for (int i = 0; i < hand.size(); i++) {
-            if (hand.get(i).isWild()) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    static int askHuman(ArrayList<Card> hand) {
+    static int askHuman(ArrayList<Card> hand, GameState game) {
         while (true) {
             System.out.print("Choose card index/code or draw: ");
             String input = scanner.nextLine().trim().toUpperCase();
-            if (input.equals("DRAW")) {
-                return -1;
-            }
+            if (input.equals("DRAW")) return -1;
             try {
                 int index = Integer.parseInt(input);
-                if (index >= 0 && index < hand.size()) {
-                    return index;
-                }
-            } catch (Exception ignored) {
-            }
+                if (index >= 0 && index < hand.size()) return index;
+            } catch (Exception ignored) {}
             for (int i = 0; i < hand.size(); i++) {
                 if (hand.get(i).code.equals(input)) {
-                    if (Rules.isLegal(hand.get(i), upCard, calledColor)) {
-                        return i;
-                    }
+                    if (Rules.isLegal(hand.get(i), game.upCard, game.calledColor)) return i;
                     System.out.println("That card is not legal.");
                 }
             }
@@ -351,67 +185,8 @@ public class Main {
         while (true) {
             System.out.print("Call color R/Y/G/B: ");
             String input = scanner.nextLine().trim().toUpperCase();
-            if (input.equals("R")) {
-                return "R";
-            }
-            if (input.equals("Y")) {
-                return "Y";
-            }
-            if (input.equals("G")) {
-                return "G";
-            }
-            if (input.equals("B")) {
-                return "B";
-            }
+            if (input.equals("R") || input.equals("Y") || input.equals("G") || input.equals("B")) return input;
             System.out.println("Bad color.");
-        }
-    }
-
-    static String chooseBotColor(ArrayList<Card> hand) {
-        int r = 0;
-        int y = 0;
-        int g = 0;
-        int b = 0;
-        for (int i = 0; i < hand.size(); i++) {
-            String c = hand.get(i).color();
-            if (c.equals("R")) {
-                r++;
-            } else if (c.equals("Y")) {
-                y++;
-            } else if (c.equals("G")) {
-                g++;
-            } else if (c.equals("B")) {
-                b++;
-            }
-        }
-        if (r >= y && r >= g && r >= b) {
-            return "R";
-        } else if (y >= r && y >= g && y >= b) {
-            return "Y";
-        } else if (g >= r && g >= y && g >= b) {
-            return "G";
-        } else {
-            return "B";
-        }
-    }
-
-    // Shims kept for selfTest() backward compatibility
-    static boolean isLegal(String card, String up, String call) {
-        return Rules.isLegal(Card.of(card), Card.of(up), call);
-    }
-
-    static String color(String card) { return Card.of(card).color(); }
-    static String rank(String card)  { return Card.of(card).rank(); }
-    static int    number(String card){ return Card.of(card).number(); }
-    static int    points(String card){ return Card.of(card).points(); }
-
-    static void next() {
-        currentPlayer += direction;
-        if (currentPlayer >= playerNames.size()) {
-            currentPlayer = 0;
-        }
-        if (currentPlayer < 0) {
-            currentPlayer = playerNames.size() - 1;
         }
     }
 
@@ -424,6 +199,15 @@ public class Main {
         return out.toString();
     }
 
+    // Shims kept for selfTest() backward compatibility
+    static boolean isLegal(String card, String up, String call) {
+        return Rules.isLegal(Card.of(card), Card.of(up), call);
+    }
+    static String color(String card)  { return Card.of(card).color(); }
+    static String rank(String card)   { return Card.of(card).rank(); }
+    static int    number(String card) { return Card.of(card).number(); }
+    static int    points(String card) { return Card.of(card).points(); }
+
     static void selfTest() {
         int passed = 0;
         if (color("R5").equals("R")) passed++; else fail("color R5");
@@ -434,24 +218,18 @@ public class Main {
         if (isLegal("B3", "W", "B")) passed++; else fail("called color");
         if (!isLegal("B3", "R9", "")) passed++; else fail("illegal mismatch");
 
+        GameState g = new GameState(2, random);
+        g.upCard = Card.of("R9"); g.calledColor = "";
         ArrayList<Card> h = new ArrayList<Card>();
-        h.add(Card.of("B3"));
-        h.add(Card.of("R4"));
-        h.add(Card.of("W"));
-        upCard = Card.of("R9");
-        calledColor = "";
-        if (chooseBotCard(h) == 1) passed++; else fail("bot normal before wild");
+        h.add(Card.of("B3")); h.add(Card.of("R4")); h.add(Card.of("W"));
+        if (g.chooseBotCard(h) == 1) passed++; else fail("bot normal before wild");
 
         ArrayList<Card> h2 = new ArrayList<Card>();
-        h2.add(Card.of("B1"));
-        h2.add(Card.of("B2"));
-        h2.add(Card.of("R3"));
-        if (chooseBotColor(h2).equals("B")) passed++; else fail("bot color");
+        h2.add(Card.of("B1")); h2.add(Card.of("B2")); h2.add(Card.of("R3"));
+        if (g.chooseBotColor(h2).equals("B")) passed++; else fail("bot color");
 
         System.out.println("Passed " + passed + " characterization checks.");
     }
 
-    static void fail(String name) {
-        throw new RuntimeException("Failed: " + name);
-    }
+    static void fail(String name) { throw new RuntimeException("Failed: " + name); }
 }
