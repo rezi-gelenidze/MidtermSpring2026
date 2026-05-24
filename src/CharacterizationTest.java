@@ -85,35 +85,35 @@ public class CharacterizationTest {
     }
 
     static void testIsLegalColorMatch() {
-        assertTrue("color match R2 on R9", Main.isLegal("R2", "R9", ""));
-        assertTrue("color match GS on G3", Main.isLegal("GS", "G3", ""));
+        assertTrue("color match R2 on R9", Rules.isLegal(Card.of("R2"), Card.of("R9"), ""));
+        assertTrue("color match GS on G3", Rules.isLegal(Card.of("GS"), Card.of("G3"), ""));
     }
 
     static void testIsLegalNumberMatch() {
-        assertTrue("number match G9 on R9", Main.isLegal("G9", "R9", ""));
-        assertTrue("number match B0 on Y0", Main.isLegal("B0", "Y0", ""));
+        assertTrue("number match G9 on R9", Rules.isLegal(Card.of("G9"), Card.of("R9"), ""));
+        assertTrue("number match B0 on Y0", Rules.isLegal(Card.of("B0"), Card.of("Y0"), ""));
     }
 
     static void testIsLegalActionMatch() {
-        assertTrue("skip match BS on RS", Main.isLegal("BS", "RS", ""));
-        assertTrue("reverse match YR on GR", Main.isLegal("YR", "GR", ""));
-        assertTrue("draw-two match R+2 on G+2", Main.isLegal("R+2", "G+2", ""));
+        assertTrue("skip match BS on RS", Rules.isLegal(Card.of("BS"), Card.of("RS"), ""));
+        assertTrue("reverse match YR on GR", Rules.isLegal(Card.of("YR"), Card.of("GR"), ""));
+        assertTrue("draw-two match R+2 on G+2", Rules.isLegal(Card.of("R+2"), Card.of("G+2"), ""));
     }
 
     static void testIsLegalWildAlwaysLegal() {
-        assertTrue("W legal on R5", Main.isLegal("W", "R5", ""));
-        assertTrue("W4 legal on BS", Main.isLegal("W4", "BS", ""));
-        assertTrue("W legal on W up-card", Main.isLegal("W", "W", ""));
+        assertTrue("W legal on R5", Rules.isLegal(Card.of("W"), Card.of("R5"), ""));
+        assertTrue("W4 legal on BS", Rules.isLegal(Card.of("W4"), Card.of("BS"), ""));
+        assertTrue("W legal on W up-card", Rules.isLegal(Card.of("W"), Card.of("W"), ""));
     }
 
     static void testIsLegalCalledColor() {
-        assertTrue("called B: B3 on W", Main.isLegal("B3", "W", "B"));
-        assertFalse("called Y: R5 on W", Main.isLegal("R5", "W", "Y"));
+        assertTrue("called B: B3 on W", Rules.isLegal(Card.of("B3"), Card.of("W"), "B"));
+        assertFalse("called Y: R5 on W", Rules.isLegal(Card.of("R5"), Card.of("W"), "Y"));
     }
 
     static void testIsLegalIllegalMismatch() {
-        assertFalse("mismatch B3 on R9", Main.isLegal("B3", "R9", ""));
-        assertFalse("mismatch GS on R9", Main.isLegal("GS", "R9", ""));
+        assertFalse("mismatch B3 on R9", Rules.isLegal(Card.of("B3"), Card.of("R9"), ""));
+        assertFalse("mismatch GS on R9", Rules.isLegal(Card.of("GS"), Card.of("R9"), ""));
     }
 
     static void testChooseBotCardPrefersDrawTwo() {

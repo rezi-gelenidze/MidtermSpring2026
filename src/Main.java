@@ -145,7 +145,7 @@ public class Main {
                 if (!quiet) {
                     System.out.println(name + " draws " + drawn);
                 }
-                if (isLegalCard(drawn, upCard, calledColor)) {
+                if (Rules.isLegal(drawn, upCard, calledColor)) {
                     if (!humanPlayers.get(currentPlayer).booleanValue()) {
                         chosen = hand.size() - 1;
                     } else {
@@ -169,9 +169,8 @@ public class Main {
                 }
 
                 Card card = hand.get(chosen);
-                boolean ok = isLegalCard(card, upCard, calledColor);
 
-                if (!ok) {
+                if (!Rules.isLegal(card, upCard, calledColor)) {
                     if (!quiet) {
                         System.out.println(name + " tried illegal card " + card + " and draws a penalty card.");
                     }
@@ -272,43 +271,33 @@ public class Main {
         return deck.remove(0);
     }
 
+    /**
+     * Bot card selection: prefers DRAW_TWO > SKIP > NUMBER > WILD.
+     * Uses Rules.isLegal() to avoid duplicating the legality check.
+     */
     static int chooseBotCard(ArrayList<Card> hand) {
+        // Prefer DRAW_TWO
         for (int i = 0; i < hand.size(); i++) {
             Card card = hand.get(i);
-            boolean ok = false;
-            if (card.isWild()) ok = true;
-            else if (card.color().equals(upCard.color())) ok = true;
-            else if (!calledColor.equals("") && card.color().equals(calledColor)) ok = true;
-            else if (card.rank().equals(upCard.rank()) && !card.rank().equals("NUMBER")) ok = true;
-            else if (card.rank().equals("NUMBER") && upCard.rank().equals("NUMBER") && card.number() == upCard.number()) ok = true;
-            if (card.rank().equals("DRAW_TWO") && ok) {
+            if (card.rank().equals("DRAW_TWO") && Rules.isLegal(card, upCard, calledColor)) {
                 return i;
             }
         }
+        // Prefer SKIP
         for (int i = 0; i < hand.size(); i++) {
             Card card = hand.get(i);
-            boolean ok = false;
-            if (card.isWild()) ok = true;
-            else if (card.color().equals(upCard.color())) ok = true;
-            else if (!calledColor.equals("") && card.color().equals(calledColor)) ok = true;
-            else if (card.rank().equals(upCard.rank()) && !card.rank().equals("NUMBER")) ok = true;
-            else if (card.rank().equals("NUMBER") && upCard.rank().equals("NUMBER") && card.number() == upCard.number()) ok = true;
-            if (card.rank().equals("SKIP") && ok) {
+            if (card.rank().equals("SKIP") && Rules.isLegal(card, upCard, calledColor)) {
                 return i;
             }
         }
+        // Prefer NUMBER
         for (int i = 0; i < hand.size(); i++) {
             Card card = hand.get(i);
-            boolean ok = false;
-            if (card.isWild()) ok = true;
-            else if (card.color().equals(upCard.color())) ok = true;
-            else if (!calledColor.equals("") && card.color().equals(calledColor)) ok = true;
-            else if (card.rank().equals(upCard.rank()) && !card.rank().equals("NUMBER")) ok = true;
-            else if (card.rank().equals("NUMBER") && upCard.rank().equals("NUMBER") && card.number() == upCard.number()) ok = true;
-            if (card.rank().equals("NUMBER") && ok) {
+            if (card.rank().equals("NUMBER") && Rules.isLegal(card, upCard, calledColor)) {
                 return i;
             }
         }
+        // Fall back to WILD
         for (int i = 0; i < hand.size(); i++) {
             if (hand.get(i).isWild()) {
                 return i;
@@ -333,7 +322,7 @@ public class Main {
             }
             for (int i = 0; i < hand.size(); i++) {
                 if (hand.get(i).code.equals(input)) {
-                    if (isLegalCard(hand.get(i), upCard, calledColor)) {
+                    if (Rules.isLegal(hand.get(i), upCard, calledColor)) {
                         return i;
                     }
                     System.out.println("That card is not legal.");
@@ -391,18 +380,9 @@ public class Main {
         }
     }
 
-    private static boolean isLegalCard(Card card, Card up, String call) {
-        if (card.isWild()) return true;
-        if (card.color().equals(up.color())) return true;
-        if (!call.equals("") && card.color().equals(call)) return true;
-        if (card.rank().equals(up.rank()) && !card.rank().equals("NUMBER")) return true;
-        if (card.rank().equals("NUMBER") && up.rank().equals("NUMBER") && card.number() == up.number()) return true;
-        return false;
-    }
-
-    // Shims kept for selfTest() and CharacterizationTest backward compatibility
+    // Shims kept for selfTest() backward compatibility
     static boolean isLegal(String card, String up, String call) {
-        return isLegalCard(Card.of(card), Card.of(up), call);
+        return Rules.isLegal(Card.of(card), Card.of(up), call);
     }
 
     static String color(String card) { return Card.of(card).color(); }
