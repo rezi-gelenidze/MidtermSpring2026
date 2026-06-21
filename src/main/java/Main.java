@@ -1,13 +1,13 @@
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
-/**
- * Main is the CLI entry point.  It owns only console I/O concerns:
- * reading player input, printing game events, and accumulating scores
- * across games.  All game logic lives in GameState; round orchestration
- * lives in GameEngine.
- */
+import persistence.GameRepository;
+import persistence.PersistenceUtil;
+
 public class Main {
     static ArrayList<String>  playerNames  = new ArrayList<String>();
     static ArrayList<Boolean> humanPlayers = new ArrayList<Boolean>();
@@ -16,11 +16,14 @@ public class Main {
     static Random  random  = new Random();
     static Scanner scanner = new Scanner(System.in);
 
+    static GameRepository repo = new GameRepository();
+
     public static void main(String[] args) {
         int bots = 3;
         int games = 1;
         boolean human = false;
         long seed = System.currentTimeMillis();
+        String queryMode = null;
 
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("--bots") && i + 1 < args.length) {
@@ -36,10 +39,19 @@ public class Main {
             } else if (args[i].equals("--self-test")) {
                 selfTest();
                 return;
+            } else if (args[i].equals("--stats") || args[i].equals("--recent")
+                    || args[i].equals("--wins") || args[i].equals("--top-scores")) {
+                queryMode = args[i];
             } else if (args[i].equals("--help")) {
-                System.out.println("Usage: scripts/run.sh [--bots N] [--games N] [--human] [--quiet] [--seed N]");
+                printHelp();
                 return;
             }
+        }
+
+        if (queryMode != null) {
+            handleQuery(queryMode);
+            PersistenceUtil.close();
+            return;
         }
 
         random = new Random(seed);
@@ -59,6 +71,75 @@ public class Main {
         for (int i = 0; i < playerNames.size(); i++) {
             System.out.println(playerNames.get(i) + ": " + scores[i]);
         }
+
+        PersistenceUtil.close();
+    }
+
+    static void printHelp() {
+        System.out.println("Usage: [--bots N] [--games N] [--human] [--quiet] [--seed N]");
+        System.out.println("       [--stats] [--recent] [--wins] [--top-scores]");
+    }
+
+    static void handleQuery(String mode) {
+        PersistenceUtil.init("uno-prod");
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+        switch (mode) {
+            case "--stats":
+                showRecentGames(fmt);
+                System.out.println();
+                showWinCounts();
+                System.out.println();
+                showHighestScores(fmt);
+                break;
+            case "--recent":
+                showRecentGames(fmt);
+                break;
+            case "--wins":
+                showWinCounts();
+                break;
+            case "--top-scores":
+                showHighestScores(fmt);
+                break;
+        }
+    }
+
+    static void showRecentGames(DateTimeFormatter fmt) {
+        System.out.println("=== Recent Games ===");
+        var games = repo.findRecentGames(10);
+        if (games.isEmpty()) {
+            System.out.println("No games played yet.");
+            return;
+        }
+        for (var g : games) {
+            System.out.printf("  Game #%d | %s | Winner: %s | Rounds: %d%n",
+                    g.getId(), g.getEndedAt().format(fmt), g.getWinner().getName(), g.getRoundsPlayed());
+        }
+    }
+
+    static void showWinCounts() {
+        System.out.println("=== Player Win Counts ===");
+        var counts = repo.getPlayerWinCounts();
+        if (counts.isEmpty()) {
+            System.out.println("No games played yet.");
+            return;
+        }
+        for (Object[] row : counts) {
+            System.out.printf("  %s: %d wins%n", row[0], row[1]);
+        }
+    }
+
+    static void showHighestScores(DateTimeFormatter fmt) {
+        System.out.println("=== Highest Scores ===");
+        var topScores = repo.getHighestScores(10);
+        if (topScores.isEmpty()) {
+            System.out.println("No games played yet.");
+            return;
+        }
+        for (Object[] row : topScores) {
+            System.out.printf("  %s: %d points (%s)%n", row[0], row[1],
+                    ((LocalDateTime) row[2]).format(fmt));
+        }
     }
 
     static void setupPlayers(int bots, boolean human) {
@@ -75,6 +156,11 @@ public class Main {
     }
 
     static void playGame() {
+        final int[] roundCounter = {0};
+        final int[] winnerHolder = {-1};
+        final int[] winPoints = {0};
+        LocalDateTime startedAt = LocalDateTime.now();
+
         GameListener listener = new GameListener() {
             public int chooseCard(int player, ArrayList<Card> hand, GameState game) {
                 boolean isHuman = humanPlayers.get(player).booleanValue();
@@ -87,6 +173,7 @@ public class Main {
             }
 
             public void onTurnStart(int player, ArrayList<Card> hand, Card upCard, String calledColor) {
+                roundCounter[0]++;
                 if (!quiet) {
                     System.out.println("\nUp card: " + upCard
                             + (calledColor.equals("") ? "" : " called " + calledColor));
@@ -96,9 +183,6 @@ public class Main {
 
             public void onCardPlayed(int player, Card card) {
                 if (!quiet) System.out.println(playerNames.get(player) + " plays " + card);
-                if (card.isWild() && !quiet) {
-                    // color announcement handled after chooseColor returns
-                }
             }
 
             public void onCardDrawn(int player, Card drawn) {
@@ -119,6 +203,8 @@ public class Main {
 
             public void onWin(int player, int points) {
                 scores[player] += points;
+                winnerHolder[0] = player;
+                winPoints[0] = points;
                 if (!quiet) System.out.println(playerNames.get(player) + " wins and scores " + points);
             }
 
@@ -135,6 +221,10 @@ public class Main {
         };
 
         GameEngine.playGame(playerNames.size(), random, listener);
+
+        if (winnerHolder[0] >= 0) {
+            repo.saveGameResult(playerNames, winnerHolder[0], scores, roundCounter[0], startedAt);
+        }
     }
 
     static int askHuman(ArrayList<Card> hand, GameState game) {
@@ -174,7 +264,6 @@ public class Main {
         return out.toString();
     }
 
-    // Shims kept for selfTest() backward compatibility
     static boolean isLegal(String card, String up, String call) {
         return Rules.isLegal(Card.of(card), Card.of(up), call);
     }
