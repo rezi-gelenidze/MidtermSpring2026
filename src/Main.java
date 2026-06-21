@@ -5,7 +5,8 @@ import java.util.Scanner;
 /**
  * Main is the CLI entry point.  It owns only console I/O concerns:
  * reading player input, printing game events, and accumulating scores
- * across games.  All game logic lives in GameState.
+ * across games.  All game logic lives in GameState; round orchestration
+ * lives in GameEngine.
  */
 public class Main {
     static ArrayList<String>  playerNames  = new ArrayList<String>();
@@ -74,92 +75,66 @@ public class Main {
     }
 
     static void playGame() {
-        GameState game = new GameState(playerNames.size(), random);
-        game.buildDeck();
-        game.dealCards();
-
-        int guard = 0;
-        while (guard < 3000) {
-            guard++;
-            int    cp     = game.getCurrentPlayer();
-            String name   = playerNames.get(cp);
-            boolean isHuman = humanPlayers.get(cp).booleanValue();
-            ArrayList<Card> hand = game.getHand(cp);
-
-            if (!quiet) {
-                System.out.println("\nUp card: " + game.getUpCard()
-                        + (game.getCalledColor().equals("") ? "" : " called " + game.getCalledColor()));
-                System.out.println(name + " hand: " + join(hand));
+        GameListener listener = new GameListener() {
+            public int chooseCard(int player, ArrayList<Card> hand, GameState game) {
+                boolean isHuman = humanPlayers.get(player).booleanValue();
+                return isHuman ? askHuman(hand, game) : game.chooseBotCard(hand);
             }
 
-            int chosen = isHuman ? askHuman(hand, game) : game.chooseBotCard(hand);
+            public String chooseColor(int player, ArrayList<Card> hand, GameState game) {
+                boolean isHuman = humanPlayers.get(player).booleanValue();
+                return isHuman ? askColor() : game.chooseBotColor(hand);
+            }
 
-            if (chosen == -1) {
-                Card drawn = game.draw();
-                hand.add(drawn);
-                if (!quiet) System.out.println(name + " draws " + drawn);
-                if (Rules.isLegal(drawn, game.getUpCard(), game.getCalledColor())) {
-                    if (!isHuman) {
-                        chosen = hand.size() - 1;
-                    } else {
-                        System.out.print("Play drawn card " + drawn + "? y/n: ");
-                        String answer = scanner.nextLine();
-                        if (answer.equalsIgnoreCase("y") || answer.equalsIgnoreCase("yes")) {
-                            chosen = hand.size() - 1;
-                        }
-                    }
+            public void onTurnStart(int player, ArrayList<Card> hand, Card upCard, String calledColor) {
+                if (!quiet) {
+                    System.out.println("\nUp card: " + upCard
+                            + (calledColor.equals("") ? "" : " called " + calledColor));
+                    System.out.println(playerNames.get(player) + " hand: " + join(hand));
                 }
             }
 
-            if (chosen >= 0) {
-                if (chosen >= hand.size()) {
-                    if (!quiet) System.out.println(name + " selected an invalid index and draws a penalty card.");
-                    hand.add(game.draw());
-                    game.next();
-                    continue;
+            public void onCardPlayed(int player, Card card) {
+                if (!quiet) System.out.println(playerNames.get(player) + " plays " + card);
+                if (card.isWild() && !quiet) {
+                    // color announcement handled after chooseColor returns
                 }
-
-                Card card = hand.get(chosen);
-                if (!Rules.isLegal(card, game.getUpCard(), game.getCalledColor())) {
-                    if (!quiet) System.out.println(name + " tried illegal card " + card + " and draws a penalty card.");
-                    hand.add(game.draw());
-                    game.next();
-                    continue;
-                }
-
-                hand.remove(chosen);
-                game.addToDiscard(game.getUpCard());
-                game.setUpCard(card);
-                game.setCalledColor("");
-                if (!quiet) System.out.println(name + " plays " + card);
-
-                if (card.isWild()) {
-                    game.setCalledColor(isHuman ? askColor() : game.chooseBotColor(hand));
-                    if (!quiet) System.out.println(name + " calls " + game.getCalledColor());
-                }
-
-                if (hand.size() == 1 && !quiet) System.out.println(name + " says UNO!");
-
-                if (hand.size() == 0) {
-                    int points = game.tallyPoints(cp);
-                    scores[cp] += points;
-                    if (!quiet) System.out.println(name + " wins and scores " + points);
-                    return;
-                }
-
-                game.applyCardEffect(card);
-
-                if (!quiet && game.getLastForcedDrawCount() > 0) {
-                    String victim = playerNames.get(game.getLastForcedDrawTarget());
-                    String word   = game.getLastForcedDrawCount() == 2 ? "two" : "four";
-                    System.out.println(victim + " draws " + word + ".");
-                }
-
-            } else {
-                game.next();
             }
-        }
-        if (!quiet) System.out.println("Game stopped at safety limit.");
+
+            public void onCardDrawn(int player, Card drawn) {
+                if (!quiet) System.out.println(playerNames.get(player) + " draws " + drawn);
+            }
+
+            public void onIllegalPlay(int player, Card card) {
+                if (!quiet) System.out.println(playerNames.get(player) + " tried illegal card " + card + " and draws a penalty card.");
+            }
+
+            public void onInvalidIndex(int player) {
+                if (!quiet) System.out.println(playerNames.get(player) + " selected an invalid index and draws a penalty card.");
+            }
+
+            public void onUno(int player) {
+                if (!quiet) System.out.println(playerNames.get(player) + " says UNO!");
+            }
+
+            public void onWin(int player, int points) {
+                scores[player] += points;
+                if (!quiet) System.out.println(playerNames.get(player) + " wins and scores " + points);
+            }
+
+            public void onForcedDraw(int target, int count) {
+                if (!quiet) {
+                    String word = count == 2 ? "two" : "four";
+                    System.out.println(playerNames.get(target) + " draws " + word + ".");
+                }
+            }
+
+            public void onGameStopped() {
+                if (!quiet) System.out.println("Game stopped at safety limit.");
+            }
+        };
+
+        GameEngine.playGame(playerNames.size(), random, listener);
     }
 
     static int askHuman(ArrayList<Card> hand, GameState game) {

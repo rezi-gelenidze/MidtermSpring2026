@@ -48,6 +48,10 @@ public class CharacterizationTest {
         testWildDrawFourForcesDraw();
         testNormalCardAdvancesOnce();
 
+        testEngineCompletesGame();
+        testEngineProducesNonZeroScore();
+        testEngineWinnerHandEmpty();
+
         System.out.println("\nCharacterizationTest: " + passed + " passed, " + failed + " failed.");
         if (failed > 0) System.exit(1);
     }
@@ -295,6 +299,62 @@ public class CharacterizationTest {
         GameState g = new GameState(3, new java.util.Random());
         g.applyCardEffect(Card.of("R5"));
         assertEqual("normal card advances turn once", 1, g.getCurrentPlayer());
+    }
+
+    // -----------------------------------------------------------------------
+    // GameEngine: integrated game-flow tests
+    // -----------------------------------------------------------------------
+
+    static void testEngineCompletesGame() {
+        int[] winnerHolder = {-1};
+        GameListener silent = silentBotListener(winnerHolder);
+        int points = GameEngine.playGame(3, new java.util.Random(42), silent);
+        assertTrue("engine completes game (winner found)", winnerHolder[0] >= 0);
+    }
+
+    static void testEngineProducesNonZeroScore() {
+        int[] winnerHolder = {-1};
+        GameListener silent = silentBotListener(winnerHolder);
+        int points = GameEngine.playGame(3, new java.util.Random(42), silent);
+        assertTrue("engine produces non-zero score", points > 0);
+    }
+
+    static void testEngineWinnerHandEmpty() {
+        final ArrayList<ArrayList<Card>> capturedHands = new ArrayList<ArrayList<Card>>();
+        int[] winnerHolder = {-1};
+        GameListener listener = new GameListener() {
+            public int chooseCard(int p, ArrayList<Card> hand, GameState s) { return s.chooseBotCard(hand); }
+            public String chooseColor(int p, ArrayList<Card> hand, GameState s) { return s.chooseBotColor(hand); }
+            public void onTurnStart(int p, ArrayList<Card> h, Card u, String c) {}
+            public void onCardPlayed(int p, Card c) {}
+            public void onCardDrawn(int p, Card c) {}
+            public void onIllegalPlay(int p, Card c) {}
+            public void onInvalidIndex(int p) {}
+            public void onUno(int p) {}
+            public void onWin(int p, int pts) {
+                winnerHolder[0] = p;
+            }
+            public void onForcedDraw(int t, int c) {}
+            public void onGameStopped() {}
+        };
+        GameEngine.playGame(3, new java.util.Random(42), listener);
+        assertTrue("engine winner was determined", winnerHolder[0] >= 0);
+    }
+
+    static GameListener silentBotListener(final int[] winnerHolder) {
+        return new GameListener() {
+            public int chooseCard(int p, ArrayList<Card> hand, GameState s) { return s.chooseBotCard(hand); }
+            public String chooseColor(int p, ArrayList<Card> hand, GameState s) { return s.chooseBotColor(hand); }
+            public void onTurnStart(int p, ArrayList<Card> h, Card u, String c) {}
+            public void onCardPlayed(int p, Card c) {}
+            public void onCardDrawn(int p, Card c) {}
+            public void onIllegalPlay(int p, Card c) {}
+            public void onInvalidIndex(int p) {}
+            public void onUno(int p) {}
+            public void onWin(int p, int pts) { winnerHolder[0] = p; }
+            public void onForcedDraw(int t, int c) {}
+            public void onGameStopped() {}
+        };
     }
 
     // -----------------------------------------------------------------------
