@@ -1,6 +1,6 @@
 # UNO CLI
 
-A command-line UNO card game in Java. Supports bot-only and interactive (human vs bots) play.
+A command-line UNO card game in Java. Supports bot-only and interactive (human vs bots) play with persistent game history.
 
 ## Prerequisites
 
@@ -74,6 +74,71 @@ Interactive game in Docker:
 ```bash
 docker run -it uno-game --human --bots 2 --games 1
 ```
+
+## Database
+
+### Selected Database and ORM
+
+- **Database**: H2 (embedded, file-based)
+- **ORM**: Hibernate 5.6 (JPA provider)
+
+### Schema
+
+The database is auto-created on first run at `./data/uno.mv.db`. Schema is managed by Hibernate (`hbm2ddl.auto=update`).
+
+Tables:
+
+- `players` — unique player names (`id`, `name`)
+- `games` — game records (`id`, `started_at`, `ended_at`, `rounds_played`, `winner_id`)
+- `game_player_scores` — per-player scores for each game (`id`, `game_id`, `player_id`, `score`)
+
+No manual schema setup is required.
+
+### Persisted Data
+
+After each completed game, the following is automatically saved:
+
+- Player names (created once, reused across games)
+- Game start and end timestamps
+- Number of rounds played
+- Per-player scores
+- Winner
+
+### Viewing Game History and Statistics
+
+Show all reports:
+
+```bash
+./mvnw exec:java -Dexec.args="--stats"
+```
+
+Show recent games only:
+
+```bash
+./mvnw exec:java -Dexec.args="--recent"
+```
+
+Show player win counts:
+
+```bash
+./mvnw exec:java -Dexec.args="--wins"
+```
+
+Show highest scores:
+
+```bash
+./mvnw exec:java -Dexec.args="--top-scores"
+```
+
+### Persistence Tests
+
+Persistence tests use an in-memory H2 database (`uno-test` persistence unit) and run automatically with:
+
+```bash
+./mvnw test
+```
+
+No external database setup is needed. Tests are fully isolated and do not depend on any local machine state.
 
 ## Logging
 
