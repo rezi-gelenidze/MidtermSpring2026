@@ -1,0 +1,8 @@
+target/
+out/
+logs/
+.idea/
+.git/
+*.iml
+TODO/
+docs/

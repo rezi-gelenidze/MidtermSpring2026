@@ -1,18 +1,27 @@
 import java.util.ArrayList;
 import java.util.Random;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class GameEngine {
+
+    private static final Logger log = LoggerFactory.getLogger(GameEngine.class);
 
     public static int playGame(int playerCount, Random random, GameListener listener) {
         GameState game = new GameState(playerCount, random);
         game.buildDeck();
         game.dealCards();
 
+        log.info("Game started with {} players", playerCount);
+
         int guard = 0;
         while (guard < 3000) {
             guard++;
             int cp = game.getCurrentPlayer();
             ArrayList<Card> hand = game.getHand(cp);
+
+            log.debug("Player {} turn — hand size: {}, up card: {}", cp, hand.size(), game.getUpCard());
 
             listener.onTurnStart(cp, hand, game.getUpCard(), game.getCalledColor());
 
@@ -21,6 +30,7 @@ public class GameEngine {
             if (chosen == -1) {
                 Card drawn = game.draw();
                 hand.add(drawn);
+                log.debug("Player {} drew {}", cp, drawn);
                 listener.onCardDrawn(cp, drawn);
                 if (Rules.isLegal(drawn, game.getUpCard(), game.getCalledColor())) {
                     chosen = hand.size() - 1;
@@ -29,6 +39,7 @@ public class GameEngine {
 
             if (chosen >= 0) {
                 if (chosen >= hand.size()) {
+                    log.warn("Player {} selected invalid index {}", cp, chosen);
                     listener.onInvalidIndex(cp);
                     hand.add(game.draw());
                     game.next();
@@ -37,6 +48,7 @@ public class GameEngine {
 
                 Card card = hand.get(chosen);
                 if (!Rules.isLegal(card, game.getUpCard(), game.getCalledColor())) {
+                    log.warn("Player {} attempted illegal card {} on {}", cp, card, game.getUpCard());
                     listener.onIllegalPlay(cp, card);
                     hand.add(game.draw());
                     game.next();
@@ -47,11 +59,13 @@ public class GameEngine {
                 game.addToDiscard(game.getUpCard());
                 game.setUpCard(card);
                 game.setCalledColor("");
+                log.info("Player {} played {}", cp, card);
                 listener.onCardPlayed(cp, card);
 
                 if (card.isWild()) {
                     String color = listener.chooseColor(cp, hand, game);
                     game.setCalledColor(color);
+                    log.info("Player {} called color {}", cp, color);
                 }
 
                 if (hand.size() == 1) {
@@ -60,6 +74,7 @@ public class GameEngine {
 
                 if (hand.size() == 0) {
                     int points = game.tallyPoints(cp);
+                    log.info("Game ended — player {} wins with {} points", cp, points);
                     listener.onWin(cp, points);
                     return points;
                 }
@@ -74,6 +89,7 @@ public class GameEngine {
                 game.next();
             }
         }
+        log.warn("Game stopped at safety limit ({} turns)", guard);
         listener.onGameStopped();
         return 0;
     }

@@ -1,25 +1,36 @@
-# Midterm UNO CLI
+# UNO CLI
 
-This is a standalone CLI UNO-like game.
+A command-line UNO card game in Java. Supports bot-only and interactive (human vs bots) play.
 
-The code is written as plausible feature-grown Java: almost everything lives in one procedural `Main` class. It works, but it has mixed responsibilities, duplicated rule logic, primitive-heavy card handling, global state, and condition-heavy gameplay code. The goal is to refactor it safely, not rewrite it.
+## Prerequisites
 
-## Compile
+- Java 11+
+- Docker (for containerized builds)
+
+## Local Build
 
 ```bash
-scripts/compile.sh
+./mvnw compile
 ```
 
-## Run Bot Games
+## Local Test
 
 ```bash
-scripts/run.sh --bots 3 --games 5 --quiet
+./mvnw test
 ```
 
-## Run Interactive Game
+## Local Run
+
+Bot-only game:
 
 ```bash
-scripts/run.sh --human --bots 2 --games 1
+./mvnw exec:java -Dexec.args="--bots 3 --games 5 --quiet"
+```
+
+Interactive game:
+
+```bash
+./mvnw exec:java -Dexec.args="--human --bots 2 --games 1"
 ```
 
 Card input examples:
@@ -34,38 +45,40 @@ W4   wild draw four
 draw draw a card
 ```
 
-## Characterization Checks
+## Package
 
 ```bash
-scripts/test.sh
+./mvnw package
 ```
 
-## Submission
+This creates `target/uno-cli-1.0-SNAPSHOT.jar`. Run it directly:
 
-Submit your work through GitHub:
+```bash
+java -jar target/uno-cli-1.0-SNAPSHOT.jar --bots 3 --games 5 --quiet
+```
 
-1. Fork this repository to your GitHub account.
-2. Clone your fork locally.
-3. Complete the midterm work in your fork.
-4. Commit your changes with clear commit messages.
-5. Push your branch to GitHub.
-6. Open a pull request from your fork back to the original repository.
+## Docker Build
 
-Your pull request must include:
+```bash
+docker build -t uno-game .
+```
 
-* refactored source code
-* characterization tests
-* `docs/refactoring-report.md`
-* `docs/extension-readiness.md`
+## Docker Run
 
-Do not submit a zip file instead of a pull request unless the instructor explicitly asks for it.
+```bash
+docker run uno-game --bots 3 --games 5 --quiet
+```
+
+Interactive game in Docker:
+
+```bash
+docker run -it uno-game --human --bots 2 --games 1
+```
+
+## Logging
+
+Game events are logged to `logs/uno.log` via SLF4J + Logback. Logged events include game start, player turns, cards played, cards drawn, invalid input, and game end. Logging does not interfere with normal CLI output.
 
 ## Rules
 
 See `docs/rules.html` for the implemented game rules.
-
-## Midterm Materials
-
-* `docs/midterm-exam.md`: midterm brief
-* `docs/rubric.md`: grading rubric
-* `docs/refactoring-guide.md`: suggested refactoring path
