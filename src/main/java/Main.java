@@ -1,6 +1,7 @@
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
@@ -24,28 +25,37 @@ public class Main {
         boolean human = false;
         long seed = System.currentTimeMillis();
         String queryMode = null;
+        Integer target = null;
 
-        for (int i = 0; i < args.length; i++) {
-            if (args[i].equals("--bots") && i + 1 < args.length) {
-                bots = Integer.parseInt(args[++i]);
-            } else if (args[i].equals("--games") && i + 1 < args.length) {
-                games = Integer.parseInt(args[++i]);
-            } else if (args[i].equals("--human")) {
-                human = true;
-            } else if (args[i].equals("--quiet")) {
-                quiet = true;
-            } else if (args[i].equals("--seed") && i + 1 < args.length) {
-                seed = Long.parseLong(args[++i]);
-            } else if (args[i].equals("--self-test")) {
-                selfTest();
-                return;
-            } else if (args[i].equals("--stats") || args[i].equals("--recent")
-                    || args[i].equals("--wins") || args[i].equals("--top-scores")) {
-                queryMode = args[i];
-            } else if (args[i].equals("--help")) {
-                printHelp();
-                return;
+        try {
+            for (int i = 0; i < args.length; i++) {
+                if (args[i].equals("--bots") && i + 1 < args.length) {
+                    bots = Integer.parseInt(args[++i]);
+                } else if (args[i].equals("--games") && i + 1 < args.length) {
+                    games = Integer.parseInt(args[++i]);
+                } else if (args[i].equals("--target") && i + 1 < args.length) {
+                    target = Integer.parseInt(args[++i]);
+                } else if (args[i].equals("--human")) {
+                    human = true;
+                } else if (args[i].equals("--quiet")) {
+                    quiet = true;
+                } else if (args[i].equals("--seed") && i + 1 < args.length) {
+                    seed = Long.parseLong(args[++i]);
+                } else if (args[i].equals("--self-test")) {
+                    selfTest();
+                    return;
+                } else if (args[i].equals("--stats") || args[i].equals("--recent")
+                        || args[i].equals("--wins") || args[i].equals("--top-scores")) {
+                    queryMode = args[i];
+                } else if (args[i].equals("--help")) {
+                    printHelp();
+                    return;
+                }
             }
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid numeric argument: " + e.getMessage());
+            printHelp();
+            return;
         }
 
         if (queryMode != null) {
@@ -62,21 +72,29 @@ public class Main {
             return;
         }
 
-        for (int g = 1; g <= games; g++) {
+        int g = 0;
+        do {
+            g++;
             if (!quiet) System.out.println("\n=== Game " + g + " ===");
             playGame();
-        }
+        } while (g < games && (target == null
+                || !Match.reachedTarget(Arrays.copyOf(scores, playerNames.size()), target)));
 
         System.out.println("\nFinal scores:");
         for (int i = 0; i < playerNames.size(); i++) {
             System.out.println(playerNames.get(i) + ": " + scores[i]);
         }
 
+        if (target != null) {
+            int winner = Match.determineWinner(Arrays.copyOf(scores, playerNames.size()));
+            System.out.println("\n" + playerNames.get(winner) + " wins the match with " + scores[winner] + " points!");
+        }
+
         PersistenceUtil.close();
     }
 
     static void printHelp() {
-        System.out.println("Usage: [--bots N] [--games N] [--human] [--quiet] [--seed N]");
+        System.out.println("Usage: [--bots N] [--games N] [--target N] [--human] [--quiet] [--seed N]");
         System.out.println("       [--stats] [--recent] [--wins] [--top-scores]");
     }
 
@@ -201,6 +219,15 @@ public class Main {
                 if (!quiet) System.out.println(playerNames.get(player) + " says UNO!");
             }
 
+            public boolean declareUno(int player, ArrayList<Card> hand, GameState game) {
+                boolean isHuman = humanPlayers.get(player).booleanValue();
+                return isHuman ? askDeclareUno() : game.chooseBotCallUno();
+            }
+
+            public void onMissedUnoPenalty(int player, int count) {
+                if (!quiet) System.out.println(playerNames.get(player) + " forgot to call UNO and draws " + count + " penalty cards.");
+            }
+
             public void onWin(int player, int points) {
                 scores[player] += points;
                 winnerHolder[0] = player;
@@ -244,6 +271,12 @@ public class Main {
             }
             System.out.println("Card not found.");
         }
+    }
+
+    static boolean askDeclareUno() {
+        System.out.print("You have one card left! Call UNO? (Y/N): ");
+        String input = scanner.nextLine().trim().toUpperCase();
+        return input.equals("Y") || input.equals("YES");
     }
 
     static String askColor() {

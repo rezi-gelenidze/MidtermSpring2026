@@ -1,5 +1,7 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -18,6 +20,7 @@ public class GameState {
     private int    currentPlayer = 0;
     private int    playerCount;
     private Random random;
+    private boolean[] unoCalled;
 
     // Set by applyCardEffect so the caller can announce who drew cards.
     private int lastForcedDrawCount  = 0;
@@ -26,6 +29,7 @@ public class GameState {
     GameState(int playerCount, Random random) {
         this.playerCount = playerCount;
         this.random      = random;
+        this.unoCalled   = new boolean[playerCount];
         for (int i = 0; i < playerCount; i++) {
             hands.add(new ArrayList<Card>());
         }
@@ -57,6 +61,7 @@ public class GameState {
     void dealCards() {
         discard.clear();
         for (ArrayList<Card> hand : hands) hand.clear();
+        Arrays.fill(unoCalled, false);
         for (int i = 0; i < playerCount; i++) {
             for (int j = 0; j < 7; j++) {
                 hands.get(i).add(draw());
@@ -132,12 +137,14 @@ public class GameState {
         }
     }
 
-    /** Bot card selection: DRAW_TWO > SKIP > NUMBER > WILD > draw. */
+    /** Bot card selection: DRAW_TWO > SKIP > REVERSE > NUMBER > WILD > draw. */
     int chooseBotCard(ArrayList<Card> hand) {
         for (int i = 0; i < hand.size(); i++)
             if (hand.get(i).rank().equals("DRAW_TWO") && Rules.isLegal(hand.get(i), upCard, calledColor)) return i;
         for (int i = 0; i < hand.size(); i++)
             if (hand.get(i).rank().equals("SKIP")     && Rules.isLegal(hand.get(i), upCard, calledColor)) return i;
+        for (int i = 0; i < hand.size(); i++)
+            if (hand.get(i).rank().equals("REVERSE")  && Rules.isLegal(hand.get(i), upCard, calledColor)) return i;
         for (int i = 0; i < hand.size(); i++)
             if (hand.get(i).rank().equals("NUMBER")   && Rules.isLegal(hand.get(i), upCard, calledColor)) return i;
         for (int i = 0; i < hand.size(); i++)
@@ -160,6 +167,41 @@ public class GameState {
         if (g >= r && g >= y && g >= b) return "G";
         return "B";
     }
+
+    /** Records whether the player declared UNO at the moment their hand reached one card. */
+    void resolveUnoDeclaration(int player, boolean called) {
+        unoCalled[player] = called;
+    }
+
+    /**
+     * Scans every player's hand. Anyone sitting at exactly one card without having
+     * called UNO draws a two-card penalty. Anyone whose hand size is no longer one
+     * has their flag reset, so a later drop back to one card must be declared again.
+     * Returns the indices of players who were penalized this scan.
+     */
+    List<Integer> checkMissedUnoPenalties() {
+        List<Integer> penalized = new ArrayList<Integer>();
+        for (int i = 0; i < playerCount; i++) {
+            if (hands.get(i).size() == 1) {
+                if (!unoCalled[i]) {
+                    hands.get(i).add(draw());
+                    hands.get(i).add(draw());
+                    penalized.add(i);
+                    unoCalled[i] = true;
+                }
+            } else {
+                unoCalled[i] = false;
+            }
+        }
+        return penalized;
+    }
+
+    /** Bot UNO-call decision: calls 90% of the time, "forgets" 10% of the time. */
+    boolean chooseBotCallUno() {
+        return random.nextInt(10) < 9;
+    }
+
+    public boolean hasCalledUno(int player) { return unoCalled[player]; }
 
     // Getters for immutable inspection
     public int getCurrentPlayer() { return currentPlayer; }

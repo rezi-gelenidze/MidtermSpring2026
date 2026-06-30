@@ -33,6 +33,20 @@ Interactive game:
 ./mvnw exec:java -Dexec.args="--human --bots 2 --games 1"
 ```
 
+Multi-round match to a target score (rounds continue, accumulating scores,
+until a player reaches the target or `--games` is hit as a safety cap; a
+final match winner is then declared):
+
+```bash
+./mvnw exec:java -Dexec.args="--bots 3 --games 50 --target 500"
+```
+
+Without `--target`, `--games` behaves exactly as before: a fixed number of
+independent rounds with no declared winner.
+
+When a player's hand drops to one card, the CLI prompts `Call UNO? (Y/N):`.
+Missing the call draws a two-card penalty before that player's next turn.
+
 Card input examples:
 
 ```text
@@ -146,4 +160,6 @@ Game events are logged to `logs/uno.log` via SLF4J + Logback. Logged events incl
 
 ## Rules
 
-See `docs/rules.html` for the implemented game rules.
+See `docs/rules-supported.md` for the final-project rule set and documented
+simplifications, and `docs/rules.html` for the original midterm rule
+reference. See `docs/final-report.md` for the final project report.

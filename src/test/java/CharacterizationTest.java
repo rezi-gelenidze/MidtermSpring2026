@@ -132,6 +132,14 @@ public class CharacterizationTest {
         assertEquals(-1, g.chooseBotCard(clist("G3", "B5")));
     }
 
+    @Test void testChooseBotCardPlaysReverseWhenItIsTheOnlyLegalCard() {
+        // Regression test: chooseBotCard previously checked DRAW_TWO/SKIP/NUMBER/WILD
+        // but never REVERSE, so a bot holding only a legal Reverse card would draw
+        // forever instead of playing it.
+        GameState g = gameWith("R9", "");
+        assertEquals(0, g.chooseBotCard(clist("RR", "G3", "B5")));
+    }
+
     // -- GameState: bot color selection tests --
 
     @Test void testChooseBotColor() {
@@ -189,6 +197,16 @@ public class CharacterizationTest {
         GameState g = new GameState(3, new Random());
         g.setUpCard(Card.of("GR"));
         g.applyCardEffect(Card.of("GR"));
+        assertEquals(-1, g.getDirection());
+    }
+
+    @Test void testReverseActsLikeSkipInTwoPlayerGame() {
+        // Documented simplification: with only 2 players, Reverse behaves like
+        // Skip — the same player who played it gets another turn.
+        GameState g = new GameState(2, new Random());
+        g.setUpCard(Card.of("GR"));
+        g.applyCardEffect(Card.of("GR"));
+        assertEquals(0, g.getCurrentPlayer());
         assertEquals(-1, g.getDirection());
     }
 

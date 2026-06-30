@@ -12,12 +12,20 @@ public class GameEngine {
         GameState game = new GameState(playerCount, random);
         game.buildDeck();
         game.dealCards();
-
         log.info("Game started with {} players", playerCount);
+        return playGame(game, listener);
+    }
 
+    /** Runs the turn loop on an already-built/dealt GameState — lets tests rig state directly. */
+    public static int playGame(GameState game, GameListener listener) {
         int guard = 0;
         while (guard < 3000) {
             guard++;
+
+            for (int penalized : game.checkMissedUnoPenalties()) {
+                listener.onMissedUnoPenalty(penalized, 2);
+            }
+
             int cp = game.getCurrentPlayer();
             ArrayList<Card> hand = game.getHand(cp);
 
@@ -69,7 +77,11 @@ public class GameEngine {
                 }
 
                 if (hand.size() == 1) {
-                    listener.onUno(cp);
+                    boolean called = listener.declareUno(cp, hand, game);
+                    game.resolveUnoDeclaration(cp, called);
+                    if (called) {
+                        listener.onUno(cp);
+                    }
                 }
 
                 if (hand.size() == 0) {
